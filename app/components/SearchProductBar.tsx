@@ -1,5 +1,5 @@
 import debounce from "lodash.debounce";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet } from "react-native";
 import { SearchBar } from "react-native-elements";
 
@@ -12,13 +12,10 @@ const SearchProductBar: React.FC<SearchProductBarProps> = ({ onSearch }) => {
 
     // Use lodash debounce to avoid multiple API calls while typing
 
-    const debouncedSearch = useMemo(
-        () =>
-            debounce((query: string) => {
-                if (onSearch) onSearch(query);
-            }, 500),
-        [onSearch]
-    );
+    const debouncedSearch = debounce(
+        (query: string) => {
+            if (onSearch) onSearch(query);
+        }, 500)
 
     useEffect(() => {
         debouncedSearch(searchText);
@@ -52,7 +49,7 @@ const SearchProductBar: React.FC<SearchProductBarProps> = ({ onSearch }) => {
             onFocus={() => {}}
             onBlur={() => {}}
             cancelButtonTitle="Cancel"
-            cancelButtonProps={{}}
+            cancelButtonProps={undefined as any}
         />
     );
 };

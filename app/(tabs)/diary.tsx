@@ -12,6 +12,8 @@ import {
     View
 } from 'react-native';
 import { FoodEntry } from '../../types';
+import SearchProductBar from "../components/SearchProductBar";
+import fetchFoodByName from "../utils/fetchProductByName";
 import { getDiaryEntries, saveDiaryEntries } from '../utils/storage';
 import Camera from './camera';
 
@@ -35,6 +37,7 @@ const DiaryScreen: React.FC = () => {
   const [selectedSection, setSelectedSection] = useState<MealSection | null>(null);
   const [addMealModalVisible, setAddMealModalVisible] = useState<boolean>(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState<boolean>(false);
+  const [showSearchBar, setShowSearchBar] = useState<boolean>(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -116,7 +119,7 @@ const DiaryScreen: React.FC = () => {
 
   const handleCameraClose = () => {
     console.log('closing camera')
-    
+
     setShowBarcodeScanner(false);
     setAddMealModalVisible(false);
   }
@@ -283,24 +286,59 @@ const DiaryScreen: React.FC = () => {
                             <View style={styles.modalButtonsSection}>
                                 <TouchableOpacity
                                     style={styles.searchButton}
-                                    onPress={() => {
-                                    if (selectedSection) {
-                                        console.log(`Opening Search Menu for ${selectedSection.title}`);
-                                    }
-                                    }}
+                                    onPress={onPressSearch(selectedSection, setAddMealModalVisible, setShowSearchBar)}
                                 >
                                     <Ionicons name="search" size={28} color="#1E40AF" />
                                     <Text style={styles.searchText}>Search Product</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     style={styles.barcodeButton}
-                                    onPress={() => {
-                                    if (selectedSection) {
-                                        console.log(`Opening Scanner for ${selectedSection.title}`);
-                                    }
-                                    setAddMealModalVisible(false)
-                                    setShowBarcodeScanner(true)
-                                    }}
+                                    onPress={onPressBarcode(selectedSection, setAddMealModalVisible, setShowBarcodeScanner)}
+                                >
+                                    <Ionicons name="barcode" size={28} color="#1E40AF" />
+                                    <Text style={styles.barcodeText}>Scan Barcode</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
+
+                {/* Modal to Add Meal in Section */}
+                <Modal
+                    animationType="fade"
+                    transparent={true}
+                    visible={showSearchBar}
+                    onRequestClose={() => setShowSearchBar(false)}
+                    >
+                    {/* Modal Background */}
+                    <View style={styles.modalOverlayBackground}>
+                        {/* Modal Content */}
+                        <View style={styles.modalContent}>
+                            <View style={styles.modalTitle}>
+                                <Text style={styles.modalTitleText}>
+                                    {`Search for food products or ingredients`}
+                                </Text>
+                                <TouchableOpacity
+                                    style={styles.closeButton}
+                                    onPress={() => setShowSearchBar(false)}
+                                >
+                                    <Ionicons name='close-sharp' size={24}/>
+                                </TouchableOpacity>
+                            </View>
+                            
+                            <Text style={styles.modalSubtitle}>Type name of product below</Text>
+                            <View style={styles.modalButtonsSection}>
+                                <SearchProductBar onSearch={handleSearch}/>
+                                <TouchableOpacity
+                                    style={styles.searchButton}
+                                    onPress={onPressSearch(selectedSection, setAddMealModalVisible, setShowSearchBar)}
+                                >
+                                    <Ionicons name="search" size={28} color="#1E40AF" />
+                                    <Text style={styles.searchText}>Search Product</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.barcodeButton}
+                                    onPress={onPressBarcode(selectedSection, setAddMealModalVisible, setShowBarcodeScanner)}
                                 >
                                     <Ionicons name="barcode" size={28} color="#1E40AF" />
                                     <Text style={styles.barcodeText}>Scan Barcode</Text>
@@ -549,3 +587,30 @@ closeButton: {
 });
 
 export default DiaryScreen;
+
+function onPressBarcode(selectedSection: MealSection, setAddMealModalVisible: React.Dispatch<React.SetStateAction<boolean>>, setShowBarcodeScanner: React.Dispatch<React.SetStateAction<boolean>>) {
+    return () => {
+        if (selectedSection) {
+            console.log(`Opening Scanner for ${selectedSection.title}`);
+        }
+        setAddMealModalVisible(false);
+        setShowBarcodeScanner(true);
+    };
+}
+
+function onPressSearch(selectedSection: MealSection, setAddMealModalVisible: React.Dispatch<React.SetStateAction<boolean>>, setShowSearchBar: React.Dispatch<React.SetStateAction<boolean>>) {
+    return () => {
+        if (selectedSection) {
+            console.log(`Opening Search Menu for ${selectedSection.title}`);
+        }
+        setAddMealModalVisible(false);
+        setShowSearchBar(true);
+
+    };
+}
+
+function handleSearch(text: string) {
+    return () => {
+        fetchFoodByName(text)
+    }
+}

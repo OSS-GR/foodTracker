@@ -316,7 +316,7 @@ const DiaryScreen: React.FC = () => {
                         <View style={styles.modalContent}>
                             <View style={styles.modalTitle}>
                                 <Text style={styles.modalTitleText}>
-                                    {`Search for food products or ingredients`}
+                                    {`Search for food by name`}
                                 </Text>
                                 <TouchableOpacity
                                     style={styles.closeButton}
@@ -326,23 +326,9 @@ const DiaryScreen: React.FC = () => {
                                 </TouchableOpacity>
                             </View>
                             
-                            <Text style={styles.modalSubtitle}>Type name of product below</Text>
+                            {/* <Text style={styles.modalSubtitle}>Type name of product below</Text> */}
                             <View style={styles.modalButtonsSection}>
                                 <SearchProductBar onSearch={handleSearch}/>
-                                <TouchableOpacity
-                                    style={styles.searchButton}
-                                    onPress={onPressSearch(selectedSection, setAddMealModalVisible, setShowSearchBar)}
-                                >
-                                    <Ionicons name="search" size={28} color="#1E40AF" />
-                                    <Text style={styles.searchText}>Search Product</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={styles.barcodeButton}
-                                    onPress={onPressBarcode(selectedSection, setAddMealModalVisible, setShowBarcodeScanner)}
-                                >
-                                    <Ionicons name="barcode" size={28} color="#1E40AF" />
-                                    <Text style={styles.barcodeText}>Scan Barcode</Text>
-                                </TouchableOpacity>
                             </View>
                         </View>
                     </View>
@@ -609,8 +595,22 @@ function onPressSearch(selectedSection: MealSection, setAddMealModalVisible: Rea
     };
 }
 
-function handleSearch(text: string) {
-    return () => {
-        fetchFoodByName(text)
+async function handleSearch(text: string) {
+    
+    let results = null;
+    try {
+        results = await fetchFoodByName(text)
+    } catch (error) {
+        console.error(error)
+    }
+    
+    // console.log('Food Search Results:', JSON.stringify(results, null, 2))
+    if (results) {
+        const keys = Object.keys(results);
+        console.log('Top-level keys:', keys);
+        results.products.forEach((product) => {
+            console.log('Product Name: ', product.product_name);
+        });
+
     }
 }

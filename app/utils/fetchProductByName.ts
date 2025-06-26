@@ -9,7 +9,7 @@ async function fetchFoodByName(productName: string) {
   const searchParams = {
     search_terms: productName,
     fields: 'code,product_name,brands,nutrition_grades,nutriments,quantity,serving_size,nutriscore_data,nova_group',
-    page_size: 20,  // Reasonable page size
+    page_size: 10,  // Reasonable page size
     page: 1
   };
   try {

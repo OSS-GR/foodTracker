@@ -60,3 +60,12 @@ export const getAllDiaryKeys = async (): Promise<string[]> => {
     return [];
   }
 };
+
+export const deleteAllDiaryKeys = async (): Promise<void> => {
+  try {
+    const allKeys = await getAllDiaryKeys()
+    await AsyncStorage.multiRemove(allKeys)
+  } catch (error) {
+    console.error('Error deleting all diary keys:', error);
+  }
+}

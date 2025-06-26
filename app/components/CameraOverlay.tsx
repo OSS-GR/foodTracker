@@ -5,10 +5,11 @@ import NutritionInfo from './NutritioinInfo';
 interface CameraOverlayProps {
   loading: boolean;
   productData: any;
+  onScanAccept: (productData: any) => void;
   onScanAgain: () => void;
 }
 
-const CameraOverlay: React.FC<CameraOverlayProps> = ({ loading, productData, onScanAgain }) => {
+const CameraOverlay: React.FC<CameraOverlayProps> = ({ loading, productData, onScanAccept, onScanAgain }) => {
   function renderResult() {
     if (loading) {
       return <Text style={styles.loadingText}>Loading...</Text>;
@@ -18,6 +19,11 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ loading, productData, onS
           <Text style={styles.productName}>{productData.product_name || 'Unknown Product'}</Text>
           <Text style={styles.brand}>Brand: {productData.brands || 'Unknown'}</Text>
           <NutritionInfo productData={productData} />
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 }}>
+            <Button title={'Add'} onPress={() => onScanAccept(productData)} />
+            <View style={{ width: 16 }} />
+            <Button title={'Scan Again'} onPress={onScanAgain} />
+          </View>
         </View>
       );
     } else {
@@ -29,7 +35,6 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ loading, productData, onS
     <View style={styles.overlay}>
       <ScrollView style={styles.resultContainer}>
         {renderResult()}
-        <Button title={'Scan Again'} onPress={onScanAgain} />
       </ScrollView>
     </View>
   );

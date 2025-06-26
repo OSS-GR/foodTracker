@@ -1,12 +1,17 @@
 import { CameraType, CameraView, useCameraPermissions } from 'expo-camera';
-import { useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Button, StyleSheet, Text, View } from 'react-native';
 import BarcodeHighlight, { BarcodeBounds } from '../components/BarcodeHighlight';
 import CameraFlipButton from '../components/CameraFlipButton';
 import CameraOverlay from '../components/CameraOverlay';
 import fetchProductByBarcode from '../utils/fetchProductByBarcode';
 
-export default function Camera() {
+interface CameraProps {
+  onScanAccept: (productData: any) => void;
+  onClose: () => void;
+}
+
+const Camera: React.FC<CameraProps> = ({ onScanAccept, onClose }) => {
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
   const [productData, setProductData] = useState<any>(null);
@@ -32,7 +37,7 @@ export default function Camera() {
     setFacing(current => (current === 'back' ? 'front' : 'back'));
   }
 
-  const handleBarCodeScanned = ({ type, data, bounds}: { type: string; data: string; bounds?: BarcodeBounds }) => {
+  const handleBarcodeScanned = ({ type, data, bounds}: { type: string; data: string; bounds?: BarcodeBounds }) => {
     if (scannedRef.current) {
       return;
     }
@@ -48,11 +53,14 @@ export default function Camera() {
       const data = await fetchProductByBarcode(barcode);
       if (data && data.status === 1) {
         setProductData(data.product);
+        // Do NOT call onScanAccept here. Wait for user to press Add.
       } else {
         setProductData(null);
+        onClose();
       }
     } catch {
       setProductData(null);
+      onClose();
     } finally {
       setLoading(false);
     }
@@ -75,7 +83,7 @@ export default function Camera() {
         barcodeScannerSettings={{
           barcodeTypes: ['aztec', 'ean13', 'ean8', 'qr', 'pdf417', 'upc_e', 'datamatrix', 'code39', 'code93', 'itf14', 'codabar', 'code128', 'upc_a'],
         }}
-        onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+        onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
       >
         <View style={styles.buttonContainer}>
           <CameraFlipButton onPress={toggleCameraFacing} />
@@ -85,6 +93,7 @@ export default function Camera() {
             <CameraOverlay
               loading={loading}
               productData={productData}
+              onScanAccept={onScanAccept}
               onScanAgain={resetScanner}
             />
             {barcodeBounds && loading && (
@@ -133,3 +142,5 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
 });
+
+export default Camera;

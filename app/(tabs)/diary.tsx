@@ -1,16 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
 import type { JSX } from 'react';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
+    Modal,
     SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import { FoodEntry } from '../../types';
-import { getDiaryEntries } from '../utils/storage';
+import { getDiaryEntries, saveDiaryEntries } from '../utils/storage';
+import Camera from './camera';
 
 interface MealSection {
   title: string;
@@ -29,10 +32,17 @@ const DiaryScreen: React.FC = () => {
   
   const [loading, setLoading] = useState<boolean>(true);
   const [totalCalories, setTotalCalories] = useState<number>(0);
+  const [selectedSection, setSelectedSection] = useState<MealSection | null>(null);
+  const [addMealModalVisible, setAddMealModalVisible] = useState<boolean>(false);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState<boolean>(false);
 
-  useEffect(() => {
-    loadDiaryData();
-  }, [currentDate]);
+  useFocusEffect(
+    useCallback(() => {
+        console.log("on navigation update");
+        loadDiaryData();
+    }, [currentDate])
+  );
+
 
   const loadDiaryData = async (): Promise<void> => {
     setLoading(true);
@@ -98,6 +108,60 @@ const DiaryScreen: React.FC = () => {
     }
   };
 
+  const addMealEntry = (section: MealSection) => {
+    setSelectedSection(section)
+    setAddMealModalVisible(true)
+    
+  }
+
+  const handleCameraClose = () => {
+    setShowBarcodeScanner(false)
+  }
+
+  const handleBarcodeScanned = async (productData: any) => {
+    if (!selectedSection) return;
+    let macros: any = {};
+    if (productData.nutriments && productData.nutriments['energy-kcal_serving']) {
+      macros = {
+        calories: productData.nutriments['energy-kcal_serving'],
+        protein: productData.nutriments.proteins_serving,
+        carbs: productData.nutriments.carbohydrates_serving,
+        fat: productData.nutriments.fat_serving,
+        servingSize: `${productData.serving_quantity}${productData.serving_quantity_unit    }`,
+      };
+    } else {
+      macros = {
+        calories: productData.nutriments?.['energy-kcal_100g'] || 0,
+        protein: productData.nutriments?.proteins_100g || 0,
+        carbs: productData.nutriments?.carbohydrates_100g || 0,
+        fat: productData.nutriments?.fat_100g || 0,
+        servingSize: productData.nutrition_data_prepared_per || '',
+      };
+    }
+    // Ensure id is always a number
+    const lastId = selectedSection.entries.length > 0 ? Number(selectedSection.entries[selectedSection.entries.length - 1].id) : 0;
+    const newEntry = {
+      id: lastId + 1,
+      foodName: productData.product_name || productData.brands || 'Unknown Product',
+      ...macros,
+      mealType: selectedSection.mealType,
+    };
+    // Update the correct section immutably
+    const updatedSections = mealSections.map(section => {
+      if (section.mealType === selectedSection.mealType) {
+        return { ...section, entries: [...section.entries, newEntry] };
+      }
+      return section;
+    });
+    setMealSections(updatedSections);
+    // Save all entries for the day
+    const allEntries = updatedSections.flatMap(section => section.entries);
+    await saveDiaryEntries(currentDate, allEntries);
+    loadDiaryData()
+    setShowBarcodeScanner(false);
+    setAddMealModalVisible(false);
+  }
+
   const renderMealSection = (section: MealSection): JSX.Element => {
     const sectionCalories = section.entries.reduce((sum, entry) => sum + entry.calories, 0);
 
@@ -109,7 +173,7 @@ const DiaryScreen: React.FC = () => {
         </View>
         
         {section.entries.length === 0 ? (
-          <TouchableOpacity style={styles.addButton}>
+          <TouchableOpacity style={styles.addButton} onPress={() => addMealEntry(section)}>
             <Ionicons name="add-circle-outline" size={24} color="#3B82F6" />
             <Text style={styles.addButtonText}>Add {section.title.toLowerCase()}</Text>
           </TouchableOpacity>
@@ -128,7 +192,7 @@ const DiaryScreen: React.FC = () => {
                 </TouchableOpacity>
               </View>
             ))}
-            <TouchableOpacity style={styles.addMoreButton}>
+            <TouchableOpacity style={styles.addMoreButton} onPress={() => addMealEntry(section)}>
               <Ionicons name="add-circle-outline" size={20} color="#3B82F6" />
               <Text style={styles.addMoreText}>Add more</Text>
             </TouchableOpacity>
@@ -150,42 +214,102 @@ const DiaryScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header with date navigation */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={goToPreviousDay} style={styles.navButton}>
-          <Ionicons name="chevron-back" size={24} color="#3B82F6" />
-        </TouchableOpacity>
-        
-        <View style={styles.dateContainer}>
-          <Text style={styles.dateText}>{formatDate(currentDate)}</Text>
-          <Text style={styles.fullDateText}>
-            {currentDate.toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
-          </Text>
-        </View>
-        
-        <TouchableOpacity onPress={goToNextDay} style={styles.navButton}>
-          <Ionicons name="chevron-forward" size={24} color="#3B82F6" />
-        </TouchableOpacity>
-      </View>
+        { !showBarcodeScanner ? (
+            <>
+                {/* Header with date navigation */}
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={goToPreviousDay} style={styles.navButton}>
+                        <Ionicons name="chevron-back" size={24} color="#3B82F6" />
+                    </TouchableOpacity>
+                
+                    <View style={styles.dateContainer}>
+                        <Text style={styles.dateText}>{formatDate(currentDate)}</Text>
+                        <Text style={styles.fullDateText}>
+                            {currentDate.toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            })}
+                        </Text>
+                    </View>
+                
+                    <TouchableOpacity onPress={goToNextDay} style={styles.navButton}>
+                        <Ionicons name="chevron-forward" size={24} color="#3B82F6" />
+                    </TouchableOpacity>
+                </View>
 
-      {/* Total calories summary */}
-      <View style={styles.summaryCard}>
-        <Text style={styles.summaryTitle}>Total Calories</Text>
-        <Text style={styles.summaryValue}>{totalCalories}</Text>
-        <Text style={styles.summarySubtext}>calories consumed today</Text>
-      </View>
+                {/* Total calories summary */}
+                <View style={styles.summaryCard}>
+                    <Text style={styles.summaryTitle}>Total Calories</Text>
+                    <Text style={styles.summaryValue}>{totalCalories}</Text>
+                    <Text style={styles.summarySubtext}>calories consumed today</Text>
+                </View>
 
-      {/* Meal sections */}
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {mealSections.map(renderMealSection)}
-        
-        {/* Bottom spacing */}
-        <View style={styles.bottomSpacing} />
-      </ScrollView>
+                {/* Meal sections */}
+                <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+                    {mealSections.map(renderMealSection)}
+                    
+                    {/* Bottom spacing */}
+                    <View style={styles.bottomSpacing} />
+                </ScrollView>
+            
+                {/* Modal to Add Meal in Section */}
+                <Modal
+                    animationType="fade"
+                    transparent={true}
+                    visible={addMealModalVisible}
+                    onRequestClose={() => setAddMealModalVisible(false)}
+                    >
+                    {/* Modal Background */}
+                    <View style={styles.modalOverlayBackground}>
+                        {/* Modal Content */}
+                        <View style={styles.modalContent}>
+                            <View style={styles.modalTitle}>
+                                <Text style={styles.modalTitleText}>
+                                    {selectedSection ? `Add to ${selectedSection.title}` : 'Add Meal'}
+                                </Text>
+                                <TouchableOpacity
+                                    style={styles.closeButton}
+                                    onPress={() => setAddMealModalVisible(false)}
+                                >
+                                    <Ionicons name='close-sharp' size={24}/>
+                                </TouchableOpacity>
+                            </View>
+                            
+                            <Text style={styles.modalSubtitle}>Search product by name or scan barcode</Text>
+                            <View style={styles.modalButtonsSection}>
+                                <TouchableOpacity
+                                    style={styles.searchButton}
+                                    onPress={() => {
+                                    if (selectedSection) {
+                                        console.log(`Opening Search Menu for ${selectedSection.title}`);
+                                    }
+                                    }}
+                                >
+                                    <Ionicons name="search" size={28} color="#1E40AF" />
+                                    <Text style={styles.searchText}>Search Product</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.barcodeButton}
+                                    onPress={() => {
+                                    if (selectedSection) {
+                                        console.log(`Opening Scanner for ${selectedSection.title}`);
+                                    }
+                                    setAddMealModalVisible(false)
+                                    setShowBarcodeScanner(true)
+                                    }}
+                                >
+                                    <Ionicons name="barcode" size={28} color="#1E40AF" />
+                                    <Text style={styles.barcodeText}>Scan Barcode</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
+            </>
+        ) : (
+            <Camera onScanAccept={handleBarcodeScanned} onClose={handleCameraClose} />
+        )}
     </SafeAreaView>
   );
 };
@@ -346,6 +470,79 @@ const styles = StyleSheet.create({
   bottomSpacing: {
     height: 20,
   },
+  modalOverlayBackground: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.3)',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+modalContent: {
+  width: '85%',
+  backgroundColor: 'white',
+  borderRadius: 16,
+  padding: 24,
+  alignItems: 'flex-start',
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.15,
+  shadowRadius: 8,
+  elevation: 5,
+},
+modalTitle: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  marginBottom: 8,
+  width: '100%'
+},
+modalTitleText: {
+  fontSize: 20,
+  fontWeight: 'bold',
+  marginBottom: 8,
+  color: '#1E40AF',
+},
+modalSubtitle: {
+  fontSize: 14,
+  color: '#6B7280',
+  marginBottom: 20,
+},
+modalButtonsSection: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  width: '100%'
+},
+barcodeButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: '#EFF6FF',
+  padding: 8,
+  borderRadius: 8,
+  marginBottom: 16,
+},
+barcodeText: {
+  fontSize: 12,
+  color: '#1E40AF',
+  marginLeft: 8,
+  fontWeight: '500',
+},
+searchButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: '#EFF6FF',
+  padding: 8,
+  borderRadius: 8,
+  marginBottom: 16,
+},
+searchText: {
+  fontSize: 12,
+  color: '#1E40AF',
+  marginLeft: 8,
+  fontWeight: '500',
+},
+closeButton: {
+  paddingBottom: 20
+},
 });
 
 export default DiaryScreen;

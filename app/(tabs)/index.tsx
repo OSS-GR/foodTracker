@@ -1,5 +1,6 @@
 import { Link } from 'expo-router';
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { deleteAllDiaryKeys } from '../utils/storage';
 
 export default function Index() {
   return (
@@ -8,6 +9,11 @@ export default function Index() {
       <Link href="/about" style={styles.button}>
         Go to About Screen
       </Link>
+      <TouchableOpacity onPress={deleteAllDiaryKeys} style={styles.resetButton}>
+        <Text style={styles.resetButtonText}>
+          Reset Diary Storage
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -26,5 +32,18 @@ const styles = StyleSheet.create({
     fontSize: 20,
     textDecorationLine: "underline",
     color: '#4CAF50',
-  }
+  },
+  resetButton: {
+    marginTop: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: '#d32f2f',
+    borderRadius: 5,
+  },
+  resetButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+    textAlign: 'center',
+  },
 })

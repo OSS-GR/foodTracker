@@ -8,7 +8,6 @@ export interface FoodEntry {
   fat: number;
   servingSize: string;
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
-  timestamp: string;
 }
 
 export interface DailyDiary {

@@ -6,10 +6,11 @@ interface CameraOverlayProps {
   loading: boolean;
   productData: any;
   onScanAccept: (productData: any) => void;
+  onScanClose: () => void;
   onScanAgain: () => void;
 }
 
-const CameraOverlay: React.FC<CameraOverlayProps> = ({ loading, productData, onScanAccept, onScanAgain }) => {
+const CameraOverlay: React.FC<CameraOverlayProps> = ({ loading, productData, onScanAccept, onScanClose, onScanAgain }) => {
   function renderResult() {
     if (loading) {
       return <Text style={styles.loadingText}>Loading...</Text>;
@@ -23,6 +24,8 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ loading, productData, onS
             <Button title={'Add'} onPress={() => onScanAccept(productData)} />
             <View style={{ width: 16 }} />
             <Button title={'Scan Again'} onPress={onScanAgain} />
+            <View style={{ width: 16 }} />
+            <Button title={'Cancel'} onPress={onScanClose} />
           </View>
         </View>
       );

@@ -94,6 +94,7 @@ const Camera: React.FC<CameraProps> = ({ onScanAccept, onClose }) => {
               loading={loading}
               productData={productData}
               onScanAccept={onScanAccept}
+              onScanClose={onClose}
               onScanAgain={resetScanner}
             />
             {barcodeBounds && loading && (

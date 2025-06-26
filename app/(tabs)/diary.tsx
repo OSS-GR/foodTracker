@@ -115,7 +115,10 @@ const DiaryScreen: React.FC = () => {
   }
 
   const handleCameraClose = () => {
-    setShowBarcodeScanner(false)
+    console.log('closing camera')
+    
+    setShowBarcodeScanner(false);
+    setAddMealModalVisible(false);
   }
 
   const handleBarcodeScanned = async (productData: any) => {
